@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  etl:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/app/data
+    working_dir: /app
+    command: python pipeline_runner.py
