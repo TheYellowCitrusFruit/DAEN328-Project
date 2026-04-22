@@ -77,8 +77,8 @@ def _normalize_strings(df:pd.DataFrame, cols:list[str]) -> pd.DataFrame:
 
 
 def _extract_segment_df(df:pd.DataFrame) -> pd.DataFrame:
-    # Basic drop de-duplication of the segments
-    segment_df = df[SEGMENT_COLUMNS].drop_duplicates()
+    # Build the segment dataframe using only the intended segment columns.
+    segment_df = df.loc[:, SEGMENT_COLUMNS].copy().drop_duplicates()
 
     ## More proper cleaning of the data
     # The normalizing value is the segment_id
@@ -87,7 +87,7 @@ def _extract_segment_df(df:pd.DataFrame) -> pd.DataFrame:
     # - Swap to/from
     # - Add direction to the street name
     # - Very slightly different geometries.
-    # However, through exploration, non of these are different segments.
+    # However, through exploration, none of these are different segments.
     # Thus we can just drop duplicates based on the segment_id and be good.
     segment_df.drop_duplicates(subset=["segmentid"], inplace=True)
 

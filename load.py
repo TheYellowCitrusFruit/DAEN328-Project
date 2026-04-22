@@ -23,8 +23,8 @@ def _create_schema(conn: sqlite3.Connection) -> None:
         """
         CREATE TABLE IF NOT EXISTS segment (
             segmentid INTEGER PRIMARY KEY,
-            boro_id INTEGER,
-            wktgeom TEXT,
+            boro_id INTEGER NOT NULL,
+            wktgeom TEXT NOT NULL,
             street TEXT,
             fromst TEXT,
             tost TEXT,
@@ -39,13 +39,13 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             requestid INTEGER,
             datetime TEXT NOT NULL,
-            day_of_week INTEGER,
-            is_weekend INTEGER,
-            hh INTEGER,
-            mm INTEGER,
-            vol INTEGER,
-            segmentid INTEGER,
-            direction TEXT,
+            day_of_week INTEGER NOT NULL,
+            is_weekend INTEGER NOT NULL,
+            hh INTEGER NOT NULL,
+            mm INTEGER NOT NULL,
+            vol INTEGER NOT NULL,
+            segmentid INTEGER NOT NULL,
+            direction TEXT NOT NULL,
             FOREIGN KEY (segmentid) REFERENCES segment(segmentid)
         );
         """
@@ -54,13 +54,14 @@ def _create_schema(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS hourly_volume (
-            segmentid INTEGER,
-            direction TEXT,
-            day_of_week INTEGER,
-            is_weekend INTEGER,
-            hh INTEGER,
-            vol INTEGER,
-            PRIMARY KEY (segmentid, direction, day_of_week, is_weekend, hh)
+            segmentid INTEGER NOT NULL,
+            direction TEXT NOT NULL,
+            day_of_week INTEGER NOT NULL,
+            is_weekend INTEGER NOT NULL,
+            hh INTEGER NOT NULL,
+            vol INTEGER NOT NULL,
+            PRIMARY KEY (segmentid, direction, day_of_week, is_weekend, hh),
+            FOREIGN KEY (segmentid) REFERENCES segment(segmentid)
         );
         """
     )
@@ -119,6 +120,9 @@ def load_dataframes_to_db(main_df, segment_df, unique_boro_df, hourly_agg_df, ap
             unique_boro_df.to_sql("borough", conn, if_exists="append", index=False)
 
         if not segment_df.empty:
+            if "direction" in segment_df.columns:
+                logging.warning("Removing stray 'direction' column from segment_df before loading segment table")
+                segment_df = segment_df.drop(columns=["direction"])
             segment_df.to_sql("segment", conn, if_exists="append", index=False)
 
         if not main_df.empty:
