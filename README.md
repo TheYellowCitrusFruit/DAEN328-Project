@@ -49,7 +49,7 @@ This folder contains the ETL pipeline and a Docker Compose service for running i
   - Skips work if the DB is already current and no force flag is set.
   - Otherwise refreshes the CSV as needed, then runs transform + load.
 
-  - `app.py`
+- `app.py`
     - Creates the Streamlit page with all figures
 
 ## Overall process
