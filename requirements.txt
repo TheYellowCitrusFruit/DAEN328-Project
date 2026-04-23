@@ -9,4 +9,3 @@ streamlit-folium
 branca
 matplotlib
 seaborn
-os
