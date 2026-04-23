@@ -292,7 +292,7 @@ if model is not None:
 
     # Final Formatting
     ax3.set_title(f"City-Wide Average Volume at {selected_hour}:00")
-    ax3.set_ylabel("Avg Predicted Volume")
+    ax3.set_ylabel("Avg Predicted Volume (Cars/Hour)")
     ax3.set_xlabel("")
     plt.xticks(rotation=45)
     sns.despine() # Removes the top and right chart borders
