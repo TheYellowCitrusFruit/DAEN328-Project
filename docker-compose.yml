@@ -9,3 +9,11 @@ services:
       - ./data:/app/data
     working_dir: /app
     command: python pipeline_runner.py
+  traffic-app:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
