@@ -91,3 +91,4 @@ docker compose down
 - `data/` is mounted as a host volume so raw CSV cache and SQLite DB persist across container runs.
 - Dates are treated as seconds since epoch from the API metadata, not milliseconds.
 - Future services like a Streamlit dashboard can be added as extra Compose services.
+- app.py will take a few minutes to load. Once the data is fetched, it will take 2-5 minutes for Streamlit to connect.
