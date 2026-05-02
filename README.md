@@ -49,7 +49,7 @@ This folder contains the ETL pipeline and a Docker Compose service for running i
   - Skips work if the DB is already current and no force flag is set.
   - Otherwise refreshes the CSV as needed, then runs transform + load.
 
-  - `app.py`
+- `app.py`
     - Creates the Streamlit page with all figures
 
 ## Overall process
@@ -91,3 +91,4 @@ docker compose down
 - `data/` is mounted as a host volume so raw CSV cache and SQLite DB persist across container runs.
 - Dates are treated as seconds since epoch from the API metadata, not milliseconds.
 - Future services like a Streamlit dashboard can be added as extra Compose services.
+- app.py will take a few minutes to load. Once the data is fetched, it will take 2-5 minutes for Streamlit to connect.
