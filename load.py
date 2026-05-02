@@ -108,37 +108,48 @@ def _ensure_int_bool_columns(df, bool_columns):
 
 
 def load_dataframes_to_db(main_df, segment_df, unique_boro_df, hourly_agg_df, api_last_updated: datetime):
-    """Create the SQLite database and load the four pipeline tables."""
+    """Create the SQLite database and load the four pipeline tables.
+
+    Writes to a temporary file first; the real database is replaced only when
+    all tables load successfully, so a mid-load failure never corrupts it.
+    """
     db_path = Path(DB_PATH)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    conn = sqlite3.connect(db_path)
+    tmp_path = db_path.with_suffix(".db.tmp")
     try:
-        _reset_database(conn)
+        conn = sqlite3.connect(tmp_path)
+        try:
+            _create_schema(conn)
 
-        if not unique_boro_df.empty:
-            unique_boro_df.to_sql("borough", conn, if_exists="append", index=False)
+            if not unique_boro_df.empty:
+                unique_boro_df.to_sql("borough", conn, if_exists="append", index=False)
 
-        if not segment_df.empty:
-            if "direction" in segment_df.columns:
-                logging.warning("Removing stray 'direction' column from segment_df before loading segment table")
-                segment_df = segment_df.drop(columns=["direction"])
-            segment_df.to_sql("segment", conn, if_exists="append", index=False)
+            if not segment_df.empty:
+                if "direction" in segment_df.columns:
+                    logging.warning("Removing stray 'direction' column from segment_df before loading segment table")
+                    segment_df = segment_df.drop(columns=["direction"])
+                segment_df.to_sql("segment", conn, if_exists="append", index=False)
 
-        if not main_df.empty:
-            main_df_for_sql = _ensure_int_bool_columns(main_df, ["is_weekend"])
-            main_df_for_sql.to_sql("traffic_count", conn, if_exists="append", index=False)
+            if not main_df.empty:
+                main_df_for_sql = _ensure_int_bool_columns(main_df, ["is_weekend"])
+                main_df_for_sql.to_sql("traffic_count", conn, if_exists="append", index=False)
 
-        if not hourly_agg_df.empty:
-            hourly_agg_df_for_sql = _ensure_int_bool_columns(hourly_agg_df, ["is_weekend"])
-            hourly_agg_df_for_sql.to_sql("hourly_volume", conn, if_exists="append", index=False)
+            if not hourly_agg_df.empty:
+                hourly_agg_df_for_sql = _ensure_int_bool_columns(hourly_agg_df, ["is_weekend"])
+                hourly_agg_df_for_sql.to_sql("hourly_volume", conn, if_exists="append", index=False)
 
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_traffic_segment ON traffic_count(segmentid);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_traffic_datetime ON traffic_count(datetime);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_hourly_segment ON hourly_volume(segmentid);")
-        conn.commit()
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_traffic_segment ON traffic_count(segmentid);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_traffic_datetime ON traffic_count(datetime);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_hourly_segment ON hourly_volume(segmentid);")
+            conn.commit()
+        finally:
+            conn.close()
 
+        # All writes succeeded — atomically replace the real database
+        tmp_path.replace(db_path)
         _save_db_last_load(api_last_updated)
         logging.info("Loaded dataframes into %s", db_path)
-    finally:
-        conn.close()
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise

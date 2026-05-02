@@ -3,5 +3,6 @@ __pycache__/
 *.pyo
 *.pyd
 data/
+.env
 .pytest_cache/
 .vscode/

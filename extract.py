@@ -104,7 +104,7 @@ def _extract_paginated_csv(
 
     with open(out_path, "w", encoding="utf-8", newline="") as f_out:
         while True:
-            params = {"$limit": page_size, "$offset": offset, "$order": ":id"}
+            params = {"$limit": page_size, "$offset": offset, "$order": "requestid"}
             logging.info(f"  Page {page}: offset={offset:,} …")
 
             resp = requests.get(SODA2_CSV_URL, params=params, timeout=120)
@@ -143,7 +143,7 @@ def _extract_paginated_csv(
     logging.info(f"✓ Extracted {total_rows:,} rows → {out_path} ({size_mb:.1f} MB)")
     return out_path
 
-def _check_existing_csv(raw_dir: Path = RAW_DIR) -> Path:
+def _check_existing_csv(raw_dir: Path = RAW_DIR) -> Path | None:
     """
     Check if the raw CSV file already exists.
 

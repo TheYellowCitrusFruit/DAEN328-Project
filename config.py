@@ -1,4 +1,8 @@
+import os
 from pathlib import Path
+
+# Toggle debug logging via the DEBUG environment variable (e.g. DEBUG=true docker-compose up)
+DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
 # Socrata SODA2 endpoint — no authentication required for public datasets
 # Supports .csv and .json extensions; we prefer CSV for flat tabular data

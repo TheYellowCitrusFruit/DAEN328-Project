@@ -1,94 +1,107 @@
-# Docker Pipeline
+# NYC Traffic Volume Predictor
 
-This folder contains the ETL pipeline and a Docker Compose service for running it.
+An end-to-end data pipeline and interactive Streamlit dashboard that predicts
+hourly traffic volume across New York City street segments.
 
-## Components
+## Project Overview
 
-- `Dockerfile`
-  - Builds a Python 3.14 image.
-  - Installs dependencies from `requirements.txt`.
-  - Copies the pipeline into the container.
-  - Runs `python pipeline_runner.py`.
+**API used:** [NYC DOT Traffic Volume Counts — NYC Open Data (Socrata)](https://data.cityofnewyork.us/resource/7ym2-wayt)
 
-- `docker-compose.yml`
-  - Defines the `etl` service.
-  - Mounts the host `../data` directory into the container at `/app/data`.
-  - Starts the pipeline service in the `docker_pipeline` folder.
+The project pulls public traffic-count records from the NYC Open Data Socrata
+API (no API key required), runs a full ETL pipeline into a local SQLite
+database, trains a Random Forest model on the cleaned data, and serves an
+interactive map and charts through a Streamlit dashboard.
 
-- `requirements.txt`
-  - Lists Python dependencies used by the pipeline.
+### Pipeline stages
 
-- `.dockerignore`
-  - Excludes build artifacts and the `data/` directory from the build context.
+| Script | Role |
+|---|---|
+| `extract.py` | Paginates the SODA2 CSV endpoint and caches the raw CSV locally |
+| `transform.py` | Cleans, normalises, and builds aggregated hourly volume tables |
+| `load.py` | Writes the transformed data into SQLite atomically |
+| `streamlit_app.py` | Loads the DB, trains the model, and renders the dashboard |
 
-- `config.py`
-  - Stores API endpoints, local paths, and metadata file locations.
+---
 
-- `extract.py`
-  - Provides `get_api_last_updated()` to read dataset freshness from Socrata metadata.
-  - Provides `is_csv_current(api_last_updated)` to check the raw CSV cache.
-  - Provides `download_csv(api_last_updated)` to refresh the CSV when needed.
-  - Saves the last API timestamp in `data/raw/last_fetch.json`.
+## Running with Docker
 
-- `transform.py`
-  - Casts numeric and text column types.
-  - Builds `datetime`, `day_of_week`, and `is_weekend` from `yr`, `m`, `d`, `hh`, `mm`.
-  - Normalizes borough values and creates a unique borough lookup.
-  - Drops null/negative `vol` rows.
-  - Normalizes street / from / to string columns.
-  - Deduplicates segment rows by `segmentid` and main volume rows.
+> **Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
 
-- `load.py`
-  - Creates the SQLite schema.
-  - Provides `is_db_current(api_last_updated)` to check whether the DB is stale.
-  - Writes pipeline results into SQLite and saves the last DB load timestamp.
+```bash
+# 1. Clone the repository
+git clone <your-repo-url>
+cd <repo-name>/docker_pipeline
 
-- `pipeline_runner.py`
-  - Orchestrates the process inside a single run.
-  - Checks the API timestamp first.
-  - Skips work if the DB is already current and no force flag is set.
-  - Otherwise refreshes the CSV as needed, then runs transform + load.
+# 2. (Optional) copy the env sample and adjust any settings
+#    No credentials are required — the Socrata API is fully public.
+cp .env.sample .env
 
-- `app.py`
-    - Creates the Streamlit page with all figures
-
-## Overall process
-
-1. Start the pipeline service.
-2. Read the dataset `rowsUpdatedAt` / `viewLastModified` timestamp from Socrata.
-3. If the database is already current, the pipeline exits.
-4. Otherwise, check the cached raw CSV.
-5. If the CSV is stale or `force_api_call` is enabled, refresh from the API.
-6. Transform data and load it into SQLite.
-7. Uses the transformed data to predict future traffic
-
-## How to start
-
-From the repository root:
-
-```powershell
-cd docker_pipeline
-docker compose up --build
+# 3. Build images and start all services
+docker-compose up --build
 ```
 
-This starts the named service `etl` defined in `docker-compose.yml`.
+`docker-compose up --build` will automatically:
 
-If you only want to start the pipeline service without rebuilding:
+1. Build the Docker image from `python:3.11-slim`
+2. Run the full ETL pipeline (`extract → transform → load`)
+3. Launch the Streamlit dashboard once the pipeline finishes
 
-```powershell
-cd docker_pipeline
-docker compose up
-```
+No manual setup steps are required.
 
-To stop the service, press `Ctrl+C` or run:
+> **Note:** The first run downloads the full NYC traffic dataset and the OSM road
+> network, which can take several minutes. Subsequent runs use the local cache
+> and start in seconds.
 
-```powershell
+To stop all services:
+
+```bash
 docker compose down
 ```
 
-## Notes
+---
 
-- `data/` is mounted as a host volume so raw CSV cache and SQLite DB persist across container runs.
-- Dates are treated as seconds since epoch from the API metadata, not milliseconds.
-- Future services like a Streamlit dashboard can be added as extra Compose services.
-- app.py will take a few minutes to load. Once the data is fetched, it will take 2-5 minutes for Streamlit to connect.
+## Accessing the Dashboard
+
+Once the containers are running, open your browser at:
+
+**http://localhost:8501**
+
+Use the sidebar controls to select a day of the week and hour of day. The map
+and charts update instantly to show predicted traffic volumes across NYC.
+
+---
+
+## Dashboard Screenshots
+
+![Streamlit dashboard screenshot 1](docs/dashboard_ss1.png)
+![Streamlit dashboard screenshot 2](docs/dashboard_ss2.png)
+
+---
+
+## Repository Structure
+
+```
+docker_pipeline/
+├── streamlit_app.py      # Streamlit dashboard + ML model
+├── pipeline_runner.py    # Orchestrates the ETL run
+├── extract.py            # Data extraction (Socrata API)
+├── transform.py          # Data cleaning and transformation
+├── load.py               # SQLite load (atomic write)
+├── config.py             # Paths, constants, feature column lists
+├── requirements.txt      # Python dependencies
+├── .env.sample           # Environment variable template (no secrets)
+├── Dockerfile            # python:3.11-slim image definition
+├── docker-compose.yml    # Two-service setup: etl + traffic-app
+└── .dockerignore
+```
+
+---
+
+## Team Members & Contributions
+
+| Name | Contributions |
+|---|---|
+| Coleman Donham | Streamlit Dashboard & Map Visualizations |
+| Matthew Lemon | Database Schema, Extraction, & Loading |
+| Prasitta Seenuvasan | Database Transformations |
+| Jon Tor | Docker Configuration |

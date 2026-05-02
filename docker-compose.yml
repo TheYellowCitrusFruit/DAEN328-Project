@@ -7,13 +7,23 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./data:/app/data
-    working_dir: /app
     command: python pipeline_runner.py
+    restart: "no"
+
   traffic-app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8501:8501"
     volumes:
-      - .:/app
+      # Mount only the data directory — mounting the entire source tree would
+      # overwrite the packages installed inside the image by pip.
+      - ./data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
+    command: streamlit run streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+    depends_on:
+      etl:
+        condition: service_completed_successfully
+    restart: unless-stopped
