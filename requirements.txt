@@ -1,2 +1,11 @@
-pandas==3.0.2
-requests==2.33.1
+streamlit
+pandas
+geopandas
+osmnx
+shapely
+scikit-learn
+folium
+streamlit-folium
+branca
+matplotlib
+seaborn

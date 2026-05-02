@@ -49,6 +49,9 @@ This folder contains the ETL pipeline and a Docker Compose service for running i
   - Skips work if the DB is already current and no force flag is set.
   - Otherwise refreshes the CSV as needed, then runs transform + load.
 
+  - `app.py`
+    - Creates the Streamlit page with all figures
+
 ## Overall process
 
 1. Start the pipeline service.
@@ -57,6 +60,7 @@ This folder contains the ETL pipeline and a Docker Compose service for running i
 4. Otherwise, check the cached raw CSV.
 5. If the CSV is stale or `force_api_call` is enabled, refresh from the API.
 6. Transform data and load it into SQLite.
+7. Uses the transformed data to predict future traffic
 
 ## How to start
 
